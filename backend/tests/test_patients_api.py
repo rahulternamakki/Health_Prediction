@@ -1,7 +1,11 @@
 from datetime import date, timedelta
-import pytest
 
-from app import ai_service
+import pytest
+from sqlalchemy.exc import IntegrityError
+
+from app import ai_service, crud, database
+from app.main import app as main_app
+from app.main import lifespan
 from app.routes import FALLBACK_REMARKS
 from app.utils import calculate_age
 
@@ -235,7 +239,7 @@ def test_update_patient_not_found_and_invalid(client):
 
 
 def test_update_patient_email_conflict(client):
-    p1 = client.post("/patients", json={**VALID_PAYLOAD, "email": "p1@clinic.com"}).json()
+    client.post("/patients", json={**VALID_PAYLOAD, "email": "p1@clinic.com"})
     p2 = client.post("/patients", json={**VALID_PAYLOAD, "email": "p2@clinic.com"}).json()
 
     # Changing p2 email to p1's email -> 409
@@ -316,3 +320,79 @@ def test_persistence_across_reads(client):
     second_read = client.get("/patients").json()
     assert len(second_read) == 1
     assert first_read == second_read
+
+
+def test_manual_edge_cases_clean_json_errors(client):
+    # DOB 31/02/2000
+    res = client.post("/patients", json={**VALID_PAYLOAD, "date_of_birth": "31/02/2000"})
+    assert res.status_code == 422
+    assert "Date of birth is not a valid calendar date" in res.text
+
+    # glucose "abc"
+    res = client.post("/patients", json={**VALID_PAYLOAD, "glucose": "abc"})
+    assert res.status_code == 422
+    assert "Input should be a valid number" in res.text
+
+    # empty body
+    res = client.post("/patients", json={})
+    assert res.status_code == 422
+
+    # id 999999
+    res = client.get("/patients/999999")
+    assert res.status_code == 404
+    assert res.json() == {"detail": "Patient not found"}
+
+    # limit=1000
+    res = client.get("/patients?limit=1000")
+    assert res.status_code == 422
+
+
+def test_create_patient_integrity_error_handled(client, monkeypatch):
+    def mock_create(*args, **kwargs):
+        raise IntegrityError("mock_statement", {}, Exception("unique constraint violation"))
+
+    monkeypatch.setattr(crud, "create_patient", mock_create)
+    res = client.post("/patients", json=VALID_PAYLOAD)
+    assert res.status_code == 409
+    assert res.json()["detail"] == "A patient with this email already exists"
+
+
+def test_update_patient_integrity_error_handled(client, monkeypatch):
+    created = client.post("/patients", json=VALID_PAYLOAD).json()
+
+    def mock_update(*args, **kwargs):
+        raise IntegrityError("mock_statement", {}, Exception("unique constraint violation"))
+
+    monkeypatch.setattr(crud, "update_patient", mock_update)
+    res = client.put(f"/patients/{created['id']}", json=VALID_PAYLOAD)
+    assert res.status_code == 409
+    assert res.json()["detail"] == "A patient with this email already exists"
+
+
+@pytest.mark.anyio
+async def test_app_lifespan(monkeypatch):
+    from unittest.mock import MagicMock
+
+    mock_create_all = MagicMock()
+    monkeypatch.setattr(database.Base.metadata, "create_all", mock_create_all)
+    async with lifespan(main_app):
+        pass
+    assert mock_create_all.called
+
+
+def test_database_get_db(monkeypatch):
+    from unittest.mock import MagicMock
+
+    mock_session = MagicMock()
+    mock_session_local = MagicMock(return_value=mock_session)
+    monkeypatch.setattr(database, "SessionLocal", mock_session_local)
+
+    gen = database.get_db()
+    db = next(gen)
+    assert db is mock_session
+    try:
+        next(gen)
+    except StopIteration:
+        pass
+    mock_session.close.assert_called_once()
+

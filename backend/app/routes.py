@@ -1,4 +1,5 @@
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.exc import IntegrityError
@@ -12,6 +13,7 @@ from app.utils import calculate_age
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/patients", tags=["patients"])
+DbSession = Annotated[Session, Depends(get_db)]
 FALLBACK_REMARKS = "AI prediction unavailable. Select the record and choose Re-run prediction."
 
 
@@ -25,7 +27,7 @@ def get_prediction(dob, glucose: float, haemoglobin: float, cholesterol: float) 
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=PatientRead)
-def create_patient(data: PatientInput, db: Session = Depends(get_db)):
+def create_patient(data: PatientInput, db: DbSession):
     if crud.get_by_email(db, data.email):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -48,16 +50,16 @@ def create_patient(data: PatientInput, db: Session = Depends(get_db)):
 
 @router.get("", response_model=list[PatientRead])
 def list_patients(
+    db: DbSession,
     search: str | None = Query(None, max_length=100),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db),
 ):
     return crud.list_patients(db, search=search, skip=skip, limit=limit)
 
 
 @router.get("/{patient_id}", response_model=PatientRead)
-def get_patient(patient_id: int, db: Session = Depends(get_db)):
+def get_patient(patient_id: int, db: DbSession):
     patient = crud.get_patient(db, patient_id)
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
@@ -65,7 +67,7 @@ def get_patient(patient_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{patient_id}", response_model=PatientRead)
-def update_patient(patient_id: int, data: PatientInput, db: Session = Depends(get_db)):
+def update_patient(patient_id: int, data: PatientInput, db: DbSession):
     patient = crud.get_patient(db, patient_id)
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
@@ -102,7 +104,7 @@ def update_patient(patient_id: int, data: PatientInput, db: Session = Depends(ge
 
 
 @router.delete("/{patient_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_patient(patient_id: int, db: Session = Depends(get_db)):
+def delete_patient(patient_id: int, db: DbSession):
     patient = crud.get_patient(db, patient_id)
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
@@ -111,7 +113,7 @@ def delete_patient(patient_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{patient_id}/predict", response_model=PatientRead)
-def rerun_prediction(patient_id: int, db: Session = Depends(get_db)):
+def rerun_prediction(patient_id: int, db: DbSession):
     patient = crud.get_patient(db, patient_id)
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")

@@ -278,39 +278,39 @@ Only numbers formatted by our code go into the prompt. No free text from the use
 Tick each item before submission.
 
 **Secrets**
-- [ ] API key only in `backend/.env`; `.env` is in `.gitignore`; `.env.example` has no real key.
-- [ ] Key sent in a header, never logged, never returned by any endpoint, never in the frontend.
-- [ ] Run `git log -p | grep -i "AIza"` (or your key prefix) before pushing; result must be empty.
+- [x] API key only in `backend/.env`; `.env` is in `.gitignore`; `.env.example` has no real key.
+- [x] Key sent in a header, never logged, never returned by any endpoint, never in the frontend.
+- [x] Run `git log -p | grep -i "AIza"` (or your key prefix) before pushing; result must be empty.
 
 **Input and database**
-- [ ] All input validated by Pydantic before use.
-- [ ] Only SQLAlchemy ORM queries; no string-built SQL.
-- [ ] Query parameters bounded (`limit <= 100`, `skip >= 0`, `search` max length).
-- [ ] Unique email enforced at the DB level and checked in code; `IntegrityError` handled with rollback and `409`.
+- [x] All input validated by Pydantic before use.
+- [x] Only SQLAlchemy ORM queries; no string-built SQL.
+- [x] Query parameters bounded (`limit <= 100`, `skip >= 0`, `search` max length).
+- [x] Unique email enforced at the DB level and checked in code; `IntegrityError` handled with rollback and `409`.
 
 **Privacy**
-- [ ] Only age + blood values go to the AI. Name, email, DOB are never sent.
-- [ ] Logs contain patient `id` and event names only.
-- [ ] Use fictional data for the demo. Free-tier AI services may use submitted data to improve their products, so never enter real patient data.
+- [x] Only age + blood values go to the AI. Name, email, DOB are never sent.
+- [x] Logs contain patient `id` and event names only.
+- [x] Use fictional data for the demo. Free-tier AI services may use submitted data to improve their products, so never enter real patient data.
 
 **External calls**
-- [ ] Timeout on every outbound HTTP call (backend to AI: 20 s; frontend to backend: 35 s).
-- [ ] AI response validated and length-capped before storing.
-- [ ] AI failure never crashes the request and never loses user data.
+- [x] Timeout on every outbound HTTP call (backend to AI: 20 s; frontend to backend: 35 s).
+- [x] AI response validated and length-capped before storing.
+- [x] AI failure never crashes the request and never loses user data.
 
 **Output**
 - [ ] Streamlit displays user text with `st.write` / `st.dataframe`, never raw HTML. If custom HTML is ever used, escape user values with `html.escape`.
-- [ ] Error messages shown to the user do not contain stack traces or internals.
+- [x] Error messages shown to the user do not contain stack traces or internals.
 
 **Network**
-- [ ] Backend runs on `127.0.0.1` for the demo.
+- [x] Backend runs on `127.0.0.1` for the demo.
 
 **Medical safety**
 - [ ] UI shows a permanent disclaimer: "Screening aid only. Not a medical diagnosis. Consult a qualified doctor."
-- [ ] Every AI remark includes advice to confirm with a doctor (enforced by the system instruction).
+- [x] Every AI remark includes advice to confirm with a doctor (enforced by the system instruction).
 
 **Dependencies**
-- [ ] `pip freeze` output saved to requirements so versions are pinned.
+- [x] `pip freeze` output saved to requirements so versions are pinned.
 - [ ] Optional: `pip install pip-audit` then `pip-audit` for known vulnerabilities.
 
 ---
@@ -964,9 +964,9 @@ Open `http://127.0.0.1:8000/docs` and try every endpoint by hand with the real A
 5. Read your own code top to bottom once and write one sentence per file in a notes file (used for interview prep).
 
 **Definition of done**
-- [ ] All tests pass; coverage target met.
-- [ ] Section 10 backend items ticked.
-- [ ] `ruff check .` reports nothing.
+- [x] All tests pass; coverage target met.
+- [x] Section 10 backend items ticked.
+- [x] `ruff check .` reports nothing.
 
 **Commit:** `chore: backend review, coverage and lint fixes`
 

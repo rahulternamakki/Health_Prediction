@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+
 import pytest
 from pydantic import ValidationError
 
@@ -202,3 +203,9 @@ def test_patient_read_serialization():
     assert dumped["id"] == 1
     assert dumped["full_name"] == "Test Patient"
     assert dumped["risk_level"] == "Low"
+
+
+def test_dob_already_date_object():
+    patient = PatientInput(**{**VALID, "date_of_birth": date(1995, 8, 15)})
+    assert patient.date_of_birth == date(1995, 8, 15)
+
