@@ -1080,10 +1080,10 @@ cd frontend && streamlit run app.py
 **Verify:** `pytest -q` in `frontend/`, then run through the manual checklist in Phase 9, section A.
 
 **Definition of done**
-- [ ] Create, read, search, edit, delete, re-run all work from the UI.
-- [ ] Backend validation messages appear next to a clear heading; entered values are kept after an error.
-- [ ] Backend stopped -> friendly "cannot reach" message, no crash.
-- [ ] `test_api_client.py` passes.
+- [x] Create, read, search, edit, delete, re-run all work from the UI.
+- [x] Backend validation messages appear next to a clear heading; entered values are kept after an error.
+- [x] Backend stopped -> friendly "cannot reach" message, no crash.
+- [x] `test_api_client.py` passes.
 
 **Commit:** `feat: Streamlit frontend with full CRUD`
 
