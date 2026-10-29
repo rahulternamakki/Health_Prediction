@@ -1,0 +1,21 @@
+# Virtual environments
+.venv/
+*/.venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Environment secrets
+.env
+*.env
+
+# SQLite and runtime data
+backend/data/
+*.db
+*.sqlite3
+
+# Test and coverage caches
+.pytest_cache/
+.coverage
+htmlcov/
