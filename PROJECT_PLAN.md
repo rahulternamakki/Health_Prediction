@@ -489,9 +489,9 @@ def calculate_age(dob: date, today: date | None = None) -> int:
 **Verify** (from `backend/`): `pytest -q`
 
 **Definition of done**
-- [ ] Model matches Section 6 exactly.
-- [ ] Unique email enforced by the database.
-- [ ] Tests pass.
+- [x] Model matches Section 6 exactly.
+- [x] Unique email enforced by the database.
+- [x] Tests pass.
 
 **Commit:** `feat: database layer and patient model`
 
