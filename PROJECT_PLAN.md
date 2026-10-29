@@ -1109,9 +1109,9 @@ Implement Phase 8 of PROJECT_PLAN.md only: create frontend/styles.py with a CSS 
 **Be realistic:** Streamlit can reproduce the layout, colour system, cards, spacing, and typography, but not every pixel of a free-form design. Prefer simplifying the design to fighting the framework.
 
 **Definition of done**
-- [ ] All Phase 7 behaviour still works (re-run the manual checklist).
-- [ ] No `unsafe_allow_html` call contains user-provided data.
-- [ ] Looks consistent on a laptop screen and a narrow window.
+- [x] All Phase 7 behaviour still works (re-run the manual checklist).
+- [x] No `unsafe_allow_html` call contains user-provided data.
+- [x] Looks consistent on a laptop screen and a narrow window.
 
 **Commit:** `style: apply visual design to the UI`
 
