@@ -299,14 +299,14 @@ Tick each item before submission.
 - [x] AI failure never crashes the request and never loses user data.
 
 **Output**
-- [ ] Streamlit displays user text with `st.write` / `st.dataframe`, never raw HTML. If custom HTML is ever used, escape user values with `html.escape`.
+- [x] Streamlit displays user text with `st.write` / `st.dataframe`, never raw HTML. If custom HTML is ever used, escape user values with `html.escape`.
 - [x] Error messages shown to the user do not contain stack traces or internals.
 
 **Network**
 - [x] Backend runs on `127.0.0.1` for the demo.
 
 **Medical safety**
-- [ ] UI shows a permanent disclaimer: "Screening aid only. Not a medical diagnosis. Consult a qualified doctor."
+- [x] UI shows a permanent disclaimer: "Screening aid only. Not a medical diagnosis. Consult a qualified doctor."
 - [x] Every AI remark includes advice to confirm with a doctor (enforced by the system instruction).
 
 **Dependencies**
@@ -1151,11 +1151,11 @@ cd frontend && pytest -q
 ```
 
 ### C. Security and cleanup pass
-- [ ] Section 10 fully ticked.
-- [ ] `git ls-files` shows no `.env`, no `.db`, no `__pycache__`.
-- [ ] Search the whole repo for: `TODO`, `FIXME`, `example`, `John`, `Jane`, `lorem`, `foo`, `bar`, `print(`, emojis in code, commented-out code. Remove or justify each hit (test data using `example.com` is fine).
-- [ ] Names are consistent (British `haemoglobin` everywhere, `glucose`, `cholesterol`).
-- [ ] No unused functions, files or dependencies.
+- [x] Section 10 fully ticked.
+- [x] `git ls-files` shows no `.env`, no `.db`, no `__pycache__`.
+- [x] Search the whole repo for: `TODO`, `FIXME`, `example`, `John`, `Jane`, `lorem`, `foo`, `bar`, `print(`, emojis in code, commented-out code. Remove or justify each hit (test data using `example.com` is fine).
+- [x] Names are consistent (British `haemoglobin` everywhere, `glucose`, `cholesterol`).
+- [x] No unused functions, files or dependencies.
 
 **Commit:** `test: end-to-end verification and cleanup`
 
