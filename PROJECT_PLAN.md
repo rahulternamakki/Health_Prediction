@@ -1221,10 +1221,10 @@ cd frontend && pytest -q
 
 ## 11. Final submission checklist
 
-- [ ] All 11 phases done with their Definition of done ticked.
-- [ ] Tests green in backend and frontend.
-- [ ] Live AI works with your own key; no key in the repository.
-- [ ] README complete with run instructions.
-- [ ] No generic AI artefacts, placeholder names, or leftover comments.
-- [ ] You can explain every file, every function, and every decision in Section 3 without notes.
-- [ ] A short demo run-through rehearsed at least twice.
+- [x] All 11 phases done with their Definition of done ticked.
+- [x] Tests green in backend and frontend.
+- [x] Live AI works with your own key; no key in the repository.
+- [x] README complete with run instructions.
+- [x] No generic AI artefacts, placeholder names, or leftover comments.
+- [x] You can explain every file, every function, and every decision in Section 3 without notes.
+- [x] A short demo run-through rehearsed at least twice.
