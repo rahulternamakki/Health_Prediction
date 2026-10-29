@@ -627,8 +627,8 @@ Valid cases to also test:
 **Verify:** `pytest -q tests/test_validation.py`
 
 **Definition of done**
-- [ ] Every row in Section 8 has at least one failing-input test and one passing-input test.
-- [ ] No test depends on today's date being a particular day.
+- [x] Every row in Section 8 has at least one failing-input test and one passing-input test.
+- [x] No test depends on today's date being a particular day.
 
 **Commit:** `feat: input schemas and validation with tests`
 
