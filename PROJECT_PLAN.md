@@ -1,6 +1,6 @@
 # Health Prediction App: Engineering Plan
 
-FastAPI (backend) + Streamlit (frontend) + SQLite (storage) + Gemini API (external AI).
+FastAPI (backend) + Streamlit (frontend) + Supabase PostgreSQL (storage) + Groq API (external AI).
 Purpose: interview assignment. Every line must be explainable by the developer.
 
 ---
@@ -49,7 +49,7 @@ Read PROJECT_PLAN.md fully before writing code. Follow it exactly.
 | R2 | CRUD (create, read, update, delete) | Phase 5 | Phase 5, 9 |
 | R3 | Simple, clean UI, easy navigation | Phase 7, 8 | Phase 9 (manual checklist) |
 | R4 | Validation: email format, DOB not in future, DOB as dd/mm/yyyy, numeric blood values | Phase 3 (server), Phase 7 (shows errors) | Phase 3, 7 |
-| R5 | Persistent storage | Phase 2 (SQLite file) | Phase 2, 9 (restart test) |
+| R5 | Persistent storage | Phase 2 (Supabase PostgreSQL / SQLite fallback) | Phase 2, 9 (restart test) |
 | R6 | Call external AI/health API with valid data | Phase 4 | Phase 4 (mocked), Phase 9 (live) |
 | R7 | Show prediction in Remarks | Phase 5 (stored), Phase 7 (displayed) | Phase 5, 9 |
 | R8 | Testing and safety | Phase 3 to 9, Section 10 | Phase 6, 9 |
@@ -63,11 +63,11 @@ Read PROJECT_PLAN.md fully before writing code. Follow it exactly.
 | Language | Python 3.11+ | Required by the brief; modern type hints (`str \| None`) |
 | Backend | FastAPI + Uvicorn | Required; automatic validation, automatic docs at `/docs` |
 | Validation | Pydantic v2 | Built into FastAPI; one place for all rules |
-| Database | SQLite via SQLAlchemy 2.0 ORM | Zero setup, file-based persistence, ORM prevents SQL injection |
+| Database | Supabase (PostgreSQL) via SQLAlchemy 2.0 ORM | Managed cloud PostgreSQL via Supabase, ORM prevents SQL injection, SQLite for rapid unit tests |
 | Frontend | Streamlit | Required; fast to build in pure Python |
 | HTTP (backend to AI) | `httpx` | Simple, supports timeouts |
 | HTTP (frontend to backend) | `requests` | Simple, widely known |
-| External AI | Google Gemini API (`generateContent` REST) | Free tier via Google AI Studio, plain REST, easy to explain |
+| External AI | Groq API (`chat/completions` REST) | Ultra-fast inference, OpenAI-compatible JSON mode, free tier via Groq Console |
 | Config | `.env` + `python-dotenv` | Keeps secrets out of code |
 | Tests | `pytest` + `pytest-cov` | Standard |
 
@@ -82,8 +82,8 @@ Read PROJECT_PLAN.md fully before writing code. Follow it exactly.
 7. **On update, the AI is re-run only if DOB or a blood value changed (or the record is still Pending).** Changing a name or email does not need a new prediction.
 8. **Email is stored lowercase and is unique.** Prevents duplicate patients differing only by case.
 9. **No CORS middleware.** Streamlit calls the backend from the Streamlit server (Python), not from the browser, so CORS does not apply.
-10. **AI provider call is isolated in one function (`_call_gemini`).** To switch provider, change only that function.
-11. **Model name is configurable** (`GEMINI_MODEL` in `.env`) because model names change over time. Verify the name in Phase 1.
+10. **AI provider call is isolated in one function (`_call_groq`).** To switch provider, change only that function.
+11. **Model name is configurable** (`GROQ_MODEL` in `.env`) because model names change over time. Defaults to `llama-3.3-70b-versatile`.
 12. **Blood value limits are plausibility bounds, not normal ranges.** They reject typos (e.g. glucose 9000) without rejecting genuinely abnormal results.
 
 ### Assumptions to state in the README
@@ -102,9 +102,9 @@ Read PROJECT_PLAN.md fully before writing code. Follow it exactly.
     v
  Streamlit UI (port 8501)  --requests-->  FastAPI (port 8000)
                                               |         |
-                                              |         +--httpx--> Gemini API (external)
+                                              |         +--httpx--> Groq API (external)
                                               v
-                                       SQLite file (backend/data/patients.db)
+                                       Supabase PostgreSQL (DATABASE_URL)
 ```
 
 **Create flow:**
@@ -230,28 +230,27 @@ Query limits: `skip >= 0`, `1 <= limit <= 100` (default 100), `search` max 100 c
 
 ## 9. AI integration design
 
-**Provider:** Gemini API, REST.
-**Endpoint:** `POST https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent`
-**Auth:** header `x-goog-api-key: <key>` (header, never in the URL, so it does not appear in logs).
-**Key:** free key from Google AI Studio. Keep it only in `backend/.env`.
+**Provider:** Groq API, REST (OpenAI-compatible chat completions).
+**Endpoint:** `POST https://api.groq.com/openai/v1/chat/completions`
+**Auth:** header `Authorization: Bearer <key>` (header, never in the URL, so it does not appear in logs).
+**Key:** free key from Groq Console (`https://console.groq.com`). Keep it only in `backend/.env`.
 
 **Request body shape**
 
 ```json
 {
-  "systemInstruction": { "parts": [ { "text": "<system instruction>" } ] },
-  "contents": [ { "role": "user", "parts": [ { "text": "<patient values>" } ] } ],
-  "generationConfig": {
-    "temperature": 0.2,
-    "maxOutputTokens": 1024,
-    "responseMimeType": "application/json"
-  }
+  "model": "<model>",
+  "messages": [
+    { "role": "system", "content": "<system instruction>" },
+    { "role": "user", "content": "<patient values>" }
+  ],
+  "temperature": 0.2,
+  "max_tokens": 1024,
+  "response_format": { "type": "json_object" }
 }
 ```
 
-`maxOutputTokens` is 1024 (not small) because some Gemini models use output tokens for internal reasoning; a tiny limit can cut the JSON in half.
-
-**Response shape we read:** `candidates[0].content.parts[*].text` (join all parts' text).
+**Response shape we read:** `choices[0].message.content`.
 
 **System instruction (text to use):**
 
@@ -353,6 +352,7 @@ Implement Phase 1 of PROJECT_PLAN.md only: folder structure (empty files where n
    pydantic[email]
    httpx
    python-dotenv
+   psycopg2-binary
    ```
    `backend/requirements-dev.txt`:
    ```
@@ -370,12 +370,12 @@ Implement Phase 1 of PROJECT_PLAN.md only: folder structure (empty files where n
 4. `.gitignore` must include: `.venv/`, `__pycache__/`, `.env`, `backend/data/`, `*.db`, `.pytest_cache/`, `.coverage`, `htmlcov/`.
 5. `backend/.env.example`:
    ```
-   GEMINI_API_KEY=your_key_here
-   GEMINI_MODEL=gemini-2.5-flash
-   DATABASE_URL=sqlite:///./data/patients.db
+   GROQ_API_KEY=your_key_here
+   GROQ_MODEL=llama-3.3-70b-versatile
+   DATABASE_URL=postgresql+psycopg2://postgres:[YOUR-PASSWORD]@[YOUR-SUBDOMAIN].pooler.supabase.com:6543/postgres
    AI_TIMEOUT_SECONDS=20
    ```
-   Copy it to `backend/.env` and put your real key there.
+   Copy it to `backend/.env` and put your real key and Supabase database URL there.
 6. `backend/pytest.ini` and `frontend/pytest.ini`:
    ```
    [pytest]
@@ -384,23 +384,23 @@ Implement Phase 1 of PROJECT_PLAN.md only: folder structure (empty files where n
    ```
 7. **Prove the key and model work** (replace the key; on Windows PowerShell use `curl.exe`, not `curl`):
    ```
-   curl "https://generativelanguage.googleapis.com/v1beta/models" -H "x-goog-api-key: YOUR_KEY"
+   curl "https://api.groq.com/openai/v1/models" -H "Authorization: Bearer YOUR_KEY"
    ```
-   This lists the models your key can use. Confirm the model in `GEMINI_MODEL` appears in the list; if not, pick a current "flash" model from the list or from Google AI Studio's docs and update `.env.example` and `.env`. Then test generation:
+   This lists the models your key can use. Confirm the model in `GROQ_MODEL` appears in the list; if not, pick a current model from the list (e.g. `llama-3.3-70b-versatile` or `llama-3.1-8b-instant`) and update `.env.example` and `.env`. Then test generation:
    ```
-   curl "https://generativelanguage.googleapis.com/v1beta/models/YOUR_MODEL:generateContent" -H "x-goog-api-key: YOUR_KEY" -H "Content-Type: application/json" -d "{\"contents\":[{\"parts\":[{\"text\":\"Reply with the word ok\"}]}]}"
+   curl "https://api.groq.com/openai/v1/chat/completions" -H "Authorization: Bearer YOUR_KEY" -H "Content-Type: application/json" -d "{\"model\":\"llama-3.3-70b-versatile\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with the word ok\"}]}"
    ```
 8. `git init`, make the first commit.
 
 **Pitfalls**
 - Do not paste the real key into any file other than `.env`.
-- If curl returns 400/403, the key is wrong or the API is not enabled for that key; fix this now, not later.
-- If you hit quota or availability problems, only `_call_gemini` in Phase 4 needs to change to use another provider.
+- If curl returns 401/403, the key is wrong or invalid; fix this now, not later.
+- If you hit quota or availability problems, only `_call_groq` in Phase 4 needs to change to use another model or provider.
 
 **Verify**
 - `python --version` shows 3.11 or higher.
 - `pytest --version` works in both venvs.
-- The generation curl returns a JSON containing `candidates`.
+- The generation curl returns a JSON containing `choices`.
 - `git status` does not list `.env`.
 
 **Definition of done**
@@ -432,8 +432,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/patients.db")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 AI_TIMEOUT_SECONDS = float(os.getenv("AI_TIMEOUT_SECONDS", "20"))
 ```
 
@@ -446,9 +446,13 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app import config
 
-Path("data").mkdir(exist_ok=True)
+if config.DATABASE_URL.startswith("sqlite"):
+    Path("data").mkdir(exist_ok=True)
+    connect_args = {"check_same_thread": False}
+else:
+    connect_args = {}
 
-engine = create_engine(config.DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(config.DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
@@ -463,7 +467,7 @@ def get_db():
     finally:
         db.close()
 ```
-`check_same_thread=False` is required because FastAPI handles requests on different threads and SQLite blocks that by default.
+`check_same_thread=False` is used when running with SQLite (e.g. tests or local fallback) because FastAPI handles requests across worker threads.
 
 `models.py`: the `Patient` class as in Section 6, using `Mapped[...]` and `mapped_column(...)`. Use `datetime.now(timezone.utc)` for timestamps (not the deprecated `utcnow`). `risk_level` default is `"Pending"`.
 
@@ -657,7 +661,7 @@ from app import config
 
 logger = logging.getLogger(__name__)
 
-API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 SYSTEM_INSTRUCTION = "..."  # exact text from Section 9
 
@@ -683,22 +687,23 @@ def build_prompt(age: int, glucose: float, haemoglobin: float, cholesterol: floa
     )
 
 
-def _call_gemini(prompt: str) -> str:
-    if not config.GEMINI_API_KEY:
+def _call_groq(prompt: str) -> str:
+    if not config.GROQ_API_KEY:
         raise AIServiceError("API key is not configured")
     body = {
-        "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.2,
-            "maxOutputTokens": 1024,
-            "responseMimeType": "application/json",
-        },
+        "model": config.GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": SYSTEM_INSTRUCTION},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 1024,
+        "response_format": {"type": "json_object"},
     }
     try:
         response = httpx.post(
-            API_URL.format(model=config.GEMINI_MODEL),
-            headers={"x-goog-api-key": config.GEMINI_API_KEY, "Content-Type": "application/json"},
+            API_URL,
+            headers={"Authorization": f"Bearer {config.GROQ_API_KEY}", "Content-Type": "application/json"},
             json=body,
             timeout=config.AI_TIMEOUT_SECONDS,
         )
@@ -707,8 +712,7 @@ def _call_gemini(prompt: str) -> str:
     if response.status_code != 200:
         raise AIServiceError(f"AI API returned status {response.status_code}")
     try:
-        parts = response.json()["candidates"][0]["content"]["parts"]
-        return "".join(part.get("text", "") for part in parts)
+        return response.json()["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError, ValueError) as exc:
         raise AIServiceError("Unexpected AI API response shape") from exc
 
@@ -721,7 +725,7 @@ def parse_prediction(text: str) -> AIPrediction:
 
 
 def predict_health_risk(age: int, glucose: float, haemoglobin: float, cholesterol: float) -> AIPrediction:
-    text = _call_gemini(build_prompt(age, glucose, haemoglobin, cholesterol))
+    text = _call_groq(build_prompt(age, glucose, haemoglobin, cholesterol))
     return parse_prediction(text)
 ```
 
@@ -729,7 +733,7 @@ def predict_health_risk(age: int, glucose: float, haemoglobin: float, cholestero
 
 The exception message deliberately contains only the exception class name or the status code, never the URL, headers, or body, so nothing sensitive can leak into logs.
 
-**Tests (`test_ai_service.py`)** monkeypatch `ai_service.httpx.post` with a fake and set the key with `monkeypatch.setattr(config, "GEMINI_API_KEY", "test-key")`:
+**Tests (`test_ai_service.py`)** monkeypatch `ai_service.httpx.post` with a fake and set the key with `monkeypatch.setattr(config, "GROQ_API_KEY", "test-key")`:
 
 ```python
 class FakeResponse:
@@ -747,8 +751,8 @@ Cases:
 1. `build_prompt` contains the age and all three values, formatted with one decimal.
 2. `parse_prediction` with valid JSON returns an `AIPrediction`; `.remarks` joins condition and advice and does not double the full stop.
 3. `parse_prediction` raises `AIServiceError` for: not JSON, JSON list, missing key, `risk_level` `"Critical"`, empty text, over-length advice.
-4. `_call_gemini` success: fake 200 response with `candidates[0].content.parts` -> returns the text; also verify the request used header `x-goog-api-key`, the model from config, and `responseMimeType`.
-5. `_call_gemini` raises `AIServiceError` for: empty API key (and `httpx.post` is not called), status 400/429/500, `httpx.TimeoutException`, `httpx.ConnectError`, 200 with no `candidates` (blocked prompt), 200 with non-JSON body.
+4. `_call_groq` success: fake 200 response with `choices[0].message.content` -> returns the text; also verify the request used header `Authorization: Bearer <key>`, the model from config, and `response_format`.
+5. `_call_groq` raises `AIServiceError` for: empty API key (and `httpx.post` is not called), status 400/401/429/500, `httpx.TimeoutException`, `httpx.ConnectError`, 200 with empty `choices`, 200 with non-JSON body.
 6. `predict_health_risk` end to end with a fake 200 response -> correct `AIPrediction`.
 7. The error message of a failed call does not contain the API key (assert `"test-key" not in str(exc)`).
 
@@ -940,7 +944,7 @@ Open `http://127.0.0.1:8000/docs` and try every endpoint by hand with the real A
 
 **Definition of done**
 - [ ] All 7 endpoints behave as in Section 7.
-- [ ] Live call through `/docs` fills `remarks` from Gemini.
+- [ ] Live call through `/docs` fills `remarks` from Groq.
 - [ ] Stop the server, start it again: records are still there (persistence).
 - [ ] Temporarily blank the API key in `.env`, restart, create a record: saved as `Pending`, no crash. Restore the key.
 
@@ -1159,16 +1163,16 @@ cd frontend && pytest -q
 
 ## Phase 10: Documentation and interview preparation
 
-**README.md** must contain: what the app does; screenshots; tech stack; assumptions (units, no sex/fasting data); setup (venv, install, `.env`), how to get the Gemini key; run commands for both servers; how to run tests; API endpoint table; validation rules; security notes; known limitations; possible improvements.
+**README.md** must contain: what the app does; screenshots; tech stack; assumptions (units, no sex/fasting data); setup (venv, install, `.env`), how to get the Groq key; how to configure Supabase DATABASE_URL; run commands for both servers; how to run tests; API endpoint table; validation rules; security notes; known limitations; possible improvements.
 
 **Known limitations to state honestly**
 - No authentication or user roles.
-- SQLite (single file) is fine for a demo, not for many concurrent users.
-- No database migrations tool; schema changes need the DB file recreated in development.
+- Cloud database connection requires internet access; local in-memory SQLite used for test isolation.
+- No database migrations tool; schema changes need the DB table recreated in development.
 - AI output is a screening hint, not medical advice; model output can vary between calls.
 - Sex and fasting status are not collected, which limits the accuracy of interpretation.
 
-**Possible improvements to mention:** authentication, Alembic migrations, PostgreSQL, retry with backoff for the AI call, rate limiting, audit log, pagination in the UI, per-test-type reference ranges by sex and age, encrypted storage for sensitive data.
+**Possible improvements to mention:** authentication, Alembic migrations, retry with backoff for the AI call, rate limiting, audit log, pagination in the UI, per-test-type reference ranges by sex and age, encrypted storage for sensitive data.
 
 ### Code reading order for revision
 `config.py` -> `database.py` -> `models.py` -> `utils.py` -> `schemas.py` -> `ai_service.py` -> `crud.py` -> `routes.py` -> `main.py` -> `api_client.py` -> `app.py` -> tests.
@@ -1190,7 +1194,7 @@ cd frontend && pytest -q
 | Why FastAPI? | Type-hint based validation, automatic docs, fast to build, async-capable |
 | Why validate on the server when the UI could do it? | The UI can be bypassed; API is the trust boundary; one source of truth |
 | How does the DOB validation work? | Before-validator parses the string, after-validator checks the range |
-| Why `check_same_thread=False`? | SQLite default blocks use across threads; FastAPI serves requests on a thread pool |
+| Why `check_same_thread=False`? | Required when using SQLite (e.g. tests or local fallback) across worker threads; not needed for PostgreSQL |
 | What is `get_db` / dependency injection? | Opens a session per request and always closes it; also easy to override in tests |
 | How do you prevent SQL injection? | ORM with bound parameters; no string-built SQL |
 | Why is the record saved if the AI fails? | Do not lose user data because a third party is down; status Pending + retry |
@@ -1201,14 +1205,14 @@ cd frontend && pytest -q
 | What happens on a duplicate email? | App-level check returns 409; DB unique constraint is the safety net |
 | Where is the API key and how is it protected? | `.env`, git-ignored, sent in a header, never logged |
 | Why PUT, not PATCH? | Simple full replace with the same schema |
-| How would you scale this? | PostgreSQL, auth, migrations, background task for AI, caching, containers |
+| How would you scale this? | Auth, migrations, background task for AI, caching, containers |
 | What are the weaknesses of this project? | See known limitations (be honest, it scores well) |
 
 ### Live-change drills (practise these)
-1. **Add a new blood field (e.g. triglycerides).** Touch: `models.py`, `schemas.py` (field + range), `ai_service.py` (`build_prompt` + system instruction), `routes.py` (`inputs_changed`, calls to `get_prediction`), `app.py` (form + table), tests. Delete the dev database file so the table is recreated.
+1. **Add a new blood field (e.g. triglycerides).** Touch: `models.py`, `schemas.py` (field + range), `ai_service.py` (`build_prompt` + system instruction), `routes.py` (`inputs_changed`, calls to `get_prediction`), `app.py` (form + table), tests.
 2. **Change a validation range** (e.g. glucose max): one line in `schemas.py` plus its boundary test.
 3. **Add a filter by risk level:** a query parameter in `routes.py`, a `where` clause in `crud.py`, a selectbox in `app.py`, one test.
-4. **Switch AI provider:** rewrite only `_call_gemini` (URL, auth header, body, response path) and its tests.
+4. **Switch AI provider:** rewrite only `_call_groq` (URL, auth header, body, response path) and its tests.
 5. **Change the date format** (e.g. `yyyy-mm-dd`): `DOB_PATTERN`, `DOB_FORMAT`, messages, tests, UI placeholder.
 
 **Commit:** `docs: README and project notes`
