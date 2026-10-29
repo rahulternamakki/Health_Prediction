@@ -406,7 +406,7 @@ Implement Phase 1 of PROJECT_PLAN.md only: folder structure (empty files where n
 **Definition of done**
 - [x] Structure matches Section 5.
 - [x] Dependencies installed and locked.
-- [ ] API key confirmed working with a valid model name.
+- [x] API key confirmed working with a valid model name.
 - [x] `.env` ignored by git.
 
 **Commit:** `chore: project setup, dependencies, env template`
