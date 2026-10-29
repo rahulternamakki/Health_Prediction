@@ -763,9 +763,9 @@ Cases:
 **Verify:** `pytest -q tests/test_ai_service.py`
 
 **Definition of done**
-- [ ] No network access in tests (turn Wi-Fi off, tests still pass).
-- [ ] Every failure path ends in `AIServiceError`, never another exception type.
-- [ ] You can explain each function in one sentence.
+- [x] No network access in tests (turn Wi-Fi off, tests still pass).
+- [x] Every failure path ends in `AIServiceError`, never another exception type.
+- [x] You can explain each function in one sentence.
 
 **Commit:** `feat: AI service with response validation and tests`
 
