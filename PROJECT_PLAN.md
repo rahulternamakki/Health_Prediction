@@ -943,10 +943,10 @@ uvicorn app.main:app --reload
 Open `http://127.0.0.1:8000/docs` and try every endpoint by hand with the real AI (this is the first live AI test).
 
 **Definition of done**
-- [ ] All 7 endpoints behave as in Section 7.
-- [ ] Live call through `/docs` fills `remarks` from Groq.
-- [ ] Stop the server, start it again: records are still there (persistence).
-- [ ] Temporarily blank the API key in `.env`, restart, create a record: saved as `Pending`, no crash. Restore the key.
+- [x] All 7 endpoints behave as in Section 7.
+- [x] Live call through `/docs` fills `remarks` from Groq.
+- [x] Stop the server, start it again: records are still there (persistence).
+- [x] Temporarily blank the API key in `.env`, restart, create a record: saved as `Pending`, no crash. Restore the key.
 
 **Commit:** `feat: CRUD API with AI prediction and tests`
 
