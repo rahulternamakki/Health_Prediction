@@ -404,10 +404,10 @@ Implement Phase 1 of PROJECT_PLAN.md only: folder structure (empty files where n
 - `git status` does not list `.env`.
 
 **Definition of done**
-- [ ] Structure matches Section 5.
-- [ ] Dependencies installed and locked.
+- [x] Structure matches Section 5.
+- [x] Dependencies installed and locked.
 - [ ] API key confirmed working with a valid model name.
-- [ ] `.env` ignored by git.
+- [x] `.env` ignored by git.
 
 **Commit:** `chore: project setup, dependencies, env template`
 
