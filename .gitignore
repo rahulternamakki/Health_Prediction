@@ -28,6 +28,10 @@ backend/data/
 .coverage
 htmlcov/
 
+# Excluded project docs and manual test directory
+PROJECT_PLAN.md
+test/
+
 # Large media files (prevent pushing >100MB videos)
 *.mp4
 *.mov
