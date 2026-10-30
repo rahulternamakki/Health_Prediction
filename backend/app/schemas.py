@@ -12,7 +12,7 @@ from pydantic import (
 
 from app.utils import calculate_age
 
-DOB_PATTERN = re.compile(r"^\d{2}/\d{2}/\d{4}$")
+DOB_PATTERN = re.compile(r"^\d{2}[/.]\d{2}[/.]\d{4}$")
 DOB_FORMAT = "%d/%m/%Y"
 MAX_AGE_YEARS = 120
 
@@ -43,7 +43,8 @@ class PatientInput(BaseModel):
         if not isinstance(value, str) or not DOB_PATTERN.match(value.strip()):
             raise ValueError("Date of birth must be in dd/mm/yyyy format")
         try:
-            return datetime.strptime(value.strip(), DOB_FORMAT).date()
+            normalized = value.strip().replace(".", "/")
+            return datetime.strptime(normalized, DOB_FORMAT).date()
         except ValueError:
             raise ValueError("Date of birth is not a valid calendar date")
 

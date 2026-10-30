@@ -2,13 +2,20 @@
 .venv/
 */.venv/
 
-# Python bytecode
+# Python bytecode & cache
 __pycache__/
 *.pyc
+*.pyo
+.ruff_cache/
+*/.ruff_cache/
 
-# Environment secrets
+# Environment secrets & credentials
 .env
 *.env
+!.env.example
+*.pem
+*.key
+*.cert
 
 # SQLite and runtime data
 backend/data/
@@ -17,5 +24,22 @@ backend/data/
 
 # Test and coverage caches
 .pytest_cache/
+*/.pytest_cache/
 .coverage
 htmlcov/
+
+# Large media files (prevent pushing >100MB videos)
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.zip
+*.tar.gz
+
+# Candidate / personal documents
+*.pdf
+
+# OS metadata
+.DS_Store
+Thumbs.db

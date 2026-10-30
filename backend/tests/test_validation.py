@@ -52,6 +52,12 @@ def test_invalid_date_of_birth(invalid_dob):
         PatientInput(**payload)
 
 
+def test_valid_date_of_birth_dot_format():
+    payload = {**VALID, "date_of_birth": "15.08.1995"}
+    patient = PatientInput(**payload)
+    assert patient.date_of_birth == date(1995, 8, 15)
+
+
 @pytest.mark.parametrize(
     "invalid_value",
     [
